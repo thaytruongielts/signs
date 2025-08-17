@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trắc Nghiệm</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .question {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .question-image-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .question-image-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .question-text {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .option-button {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            background-color: #fff;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .option-button:hover {
+            background-color: #e9ecef;
+        }
+        .option-button.selected {
+            border-color: #007bff;
+            background-color: #e6f2ff;
+        }
+        .option-button.correct {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .option-button.incorrect {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .results-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .results-box {
+            background-color: #eaf5ff;
+            border: 1px solid #cce5ff;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .buttons button {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        #submit-button {
+            background-color: #007bff;
+        }
+        #submit-button:hover {
+            background-color: #0056b3;
+        }
+        #new-quiz-button {
+            background-color: #28a745;
+        }
+        #new-quiz-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Trắc Nghiệm</h1>
+
+    <div id="quiz-container">
+        </div>
+
+    <div class="buttons">
+        <button id="submit-button">Nộp bài</button>
+        <button id="new-quiz-button">Bài Mới</button>
+    </div>
+
+    <div class="results-container">
+        <div id="results-box" class="results-box">
+            <h3>Kết quả:</h3>
+            <p>Bạn đã trả lời đúng <span id="correct-count">0</span> / <span id="total-questions">5</span> câu.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbwqio2q0BUscw6k4jkpmHu0jxrqlE0CSsMeBW0hshdjjPuX5DafqWe5JlCVUpX7x8xBcA/exec'; // PASTE YOUR DEPLOYED WEB APP URL HERE
+    
+    const quizContainer = document.getElementById('quiz-container');
+    const submitButton = document.getElementById('submit-button');
+    const newQuizButton = document.getElementById('new-quiz-button');
+    const resultsBox = document.getElementById('results-box');
+    const correctCountSpan = document.getElementById('correct-count');
+    const totalQuestionsSpan = document.getElementById('total-questions');
+
+    let currentQuestions = [];
+    let userAnswers = {};
+
+    async function fetchQuestions() {
+        quizContainer.innerHTML = '<p style="text-align: center;">Đang tải câu hỏi...</p>';
+        submitButton.style.display = 'none';
+        newQuizButton.style.display = 'none';
+        resultsBox.style.display = 'none';
+
+        try {
+            const response = await fetch(webAppUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const questions = await response.json();
+            currentQuestions = questions;
+            totalQuestionsSpan.textContent = currentQuestions.length;
+            renderQuiz();
+            submitButton.style.display = 'block';
+            newQuizButton.style.display = 'block';
+        } catch (error) {
+            console.error('Lỗi khi tải câu hỏi:', error);
+            quizContainer.innerHTML = `<p style="color: red; text-align: center;">Lỗi: ${error.message}. Vui lòng kiểm tra lại URL Apps Script hoặc quyền truy cập.</p>`;
+            newQuizButton.style.display = 'block';
+        }
+    }
+
+    function renderQuiz() {
+        quizContainer.innerHTML = '';
+        userAnswers = {};
+        currentQuestions.forEach((q, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question';
+            questionDiv.innerHTML = `
+                <p><strong>Câu ${index + 1}:</strong></p>
+                <div class="question-image-container">
+                    <img src="${q.image}" alt="Question Image">
+                </div>
+                <div class="question-text">${q.questionText}</div>
+                <div class="options" data-question-index="${index}">
+                    ${q.options.map((option, optIndex) => `
+                        <div class="option-button" data-option-index="${optIndex}">${option.text}</div>
+                    `).join('')}
+                </div>
+            `;
+            quizContainer.appendChild(questionDiv);
+        });
+
+        // Add event listeners for options
+        document.querySelectorAll('.option-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const questionIndex = event.target.closest('.options').dataset.questionIndex;
+                const selectedOptionText = event.target.textContent;
+
+                // Remove 'selected' from all other options in this question
+                document.querySelectorAll(`.options[data-question-index="${questionIndex}"] .option-button`).forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                // Add 'selected' to the clicked button
+                event.target.classList.add('selected');
+                userAnswers[questionIndex] = selectedOptionText;
+            });
+        });
+    }
+
+    function checkAnswers() {
+        let correctCount = 0;
+        currentQuestions.forEach((q, index) => {
+            const questionDiv = document.querySelectorAll('.question')[index];
+            const optionsDiv = questionDiv.querySelector('.options');
+            const userChoice = userAnswers[index];
+
+            // Highlight correct and incorrect options
+            q.options.forEach((option, optIndex) => {
+                const button = optionsDiv.querySelector(`[data-option-index="${optIndex}"]`);
+                button.classList.remove('selected');
+                
+                if (option.isCorrect) {
+                    button.classList.add('correct');
+                }
+                if (button.textContent === userChoice && !option.isCorrect) {
+                    button.classList.add('incorrect');
+                }
+            });
+
+            // Count correct answers
+            if (userChoice && q.options.find(opt => opt.text === userChoice).isCorrect) {
+                correctCount++;
+            }
+        });
+
+        correctCountSpan.textContent = correctCount;
+        resultsBox.style.display = 'block';
+        submitButton.style.display = 'none'; // Hide submit button after grading
+    }
+
+    submitButton.addEventListener('click', checkAnswers);
+    newQuizButton.addEventListener('click', fetchQuestions);
+
+    // Initial load
+    fetchQuestions();
+</script>
+
+</body>
+</html>
